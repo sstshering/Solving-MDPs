@@ -1,14 +1,13 @@
 import random
 import numpy as np
 
-class StudentMDP:
+class StudentMDPMC:
     def __init__(self):
         self.states = ['R', 'T', 'D', 'U', '8p', 'terminal']
         self.actions = ['P', 'R', 'S', 'any']
         self.state_action_values = np.zeros((len(self.states), len(self.actions)))
         self.reward = []
-        self.total_reward = 0
-
+        
     #  randomly selects an action from the list of actions
     def policy(self, state):
         return random.choice(self.actions)
@@ -62,7 +61,6 @@ class StudentMDP:
         else:
             return 'terminal'
 
-
     def get_reward(self, state, action, next_state):
         # Rewards model
         if state == 'D' and action == 'S' and next_state == 'U':
@@ -84,18 +82,17 @@ class StudentMDP:
             next_state, reward = self.transition(state, action)
             action = self.policy(next_state)
             reward = self.get_reward(state, action, next_state)
-            episode[-1] = (next_state, action, total_reward + reward)  # Update the total reward
+            episode[-1] = (next_state, action, total_reward + reward)  
             total_reward += reward
             state = next_state
 
         return episode, total_reward
 
-
     # implements first-visit Monte Carlo updates for updating the state-action values.
     def mc_update(self, episode):
         G = 0
         W = 1
-        for state, action, total_reward in reversed(episode):
+        for state, action, _ in reversed(episode):
             G += W
             state_idx = self.states.index(state)
             action_idx = self.actions.index(action)
@@ -116,12 +113,11 @@ class StudentMDP:
         else:
             print("No episodes completed yet.")
 
-
-student_mdp = StudentMDP()
+student_mdp = StudentMDPMC()
 for i in range(50):
     episode, episode_reward= student_mdp.simulate_episode()
-    print("episode:\n", episode)
-    print("episode reward:\n", episode_reward)
+    # print("episode:\n", episode)
+    # print("episode reward:\n", episode_reward)
     student_mdp.mc_update(episode)
     student_mdp.reward.append(episode_reward)
     student_mdp.print_results()
