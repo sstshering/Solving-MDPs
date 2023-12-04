@@ -3,10 +3,11 @@ import numpy as np
 
 class StudentMDP:
     def __init__(self):
-        self.states = ['R', 'T', 'D', 'U', '8p','terminal']
+        self.states = ['R', 'T', 'D', 'U', '8p', 'terminal']
         self.actions = ['P', 'R', 'S', 'any']
         self.state_action_values = np.zeros((len(self.states), len(self.actions)))
-        self.reward = 0
+        self.reward = []
+        self.total_reward = 0
 
     #  randomly selects an action from the list of actions
     def policy(self, state):
@@ -76,63 +77,51 @@ class StudentMDP:
     # runs an episode of the MDP and returns the sequence of experiences and the total reward for the episode
     def simulate_episode(self):
         state = random.choice(self.states)
-        # print(state)
         action = self.policy(state)
-        # print(action)
-        episode = [(state, action, self.reward)]
-        # print(episode)
+        episode = [(state, action, 0)]  # Store the total reward directly
+        total_reward = 0
         while state != 'terminal' and state != '8p':
             next_state, reward = self.transition(state, action)
             action = self.policy(next_state)
             reward = self.get_reward(state, action, next_state)
-            print(reward)
-            episode.append((next_state, action, reward))
-            # print(episode)
+            episode[-1] = (next_state, action, total_reward + reward)  # Update the total reward
+            total_reward += reward
             state = next_state
-            
-        print("Episode terminated")
-        if len(episode) > 1:
-            state, action, _ = episode[-2]
-            next_state, action, reward = episode[-1]
-            reward = self.get_reward(state, action, next_state)
-            episode[-1] = (next_state, action, reward)
-            
-        total_reward = sum(r for _, _, r in episode)
+
         return episode, total_reward
 
-    
+
     # implements first-visit Monte Carlo updates for updating the state-action values.
     def mc_update(self, episode):
         G = 0
         W = 1
-        total_actions = len(self.actions)
-        print("Ta", total_actions)
-        for state, action, _ in reversed(episode):
+        for state, action, total_reward in reversed(episode):
             G += W
-            s_a_idx = self.states.index(state) * total_actions + self.actions.index(action)
-            print('s_a_idx', s_a_idx)
-            print('state_action_values shape:', self.state_action_values.shape)
-            self.state_action_values[s_a_idx] += 0.1 * (G - self.state_action_values[s_a_idx])
+            state_idx = self.states.index(state)
+            action_idx = self.actions.index(action)
+            self.state_action_values[state_idx, action_idx] += 0.1 * (G - self.state_action_values[state_idx, action_idx])
             W = W * 0.9
-
-
-    # prints out the state-action values and the average reward per episode.
+            
+    # prints out the state-action values and the average reward per episode.    
     def print_results(self):
-        state_action_values_list = self.state_action_values.tolist()
         print("{:<10} {:<10} {:<15}".format("State", "Action", "Reward"))
         for i, state in enumerate(self.states):
             for j, action in enumerate(self.actions):
-                values = state_action_values_list[i * len(self.actions) + j]
-                total_value = sum(values)
-                print("{:<10} {:<10} {:<15}".format(state, action, total_value))
-        print("Average reward per episode: {:.2f}".format(sum(self.reward) / len(self.reward)))
+                value = self.state_action_values[i, j]
+                print("{:<10} {:<10} {:<15}".format(state, action, value))
+
+        if self.reward:
+            avg_reward = sum(self.reward) / len(self.reward)
+            print("Average reward per episode: {:.2f}".format(avg_reward))
+        else:
+            print("No episodes completed yet.")
+
 
 student_mdp = StudentMDP()
 for i in range(50):
     episode, episode_reward= student_mdp.simulate_episode()
     print("episode:\n", episode)
-    # episode_reward = [sum(r for s, a, r in episode if len(episode) == 3)]
     print("episode reward:\n", episode_reward)
     student_mdp.mc_update(episode)
-    student_mdp.reward += episode_reward
+    student_mdp.reward.append(episode_reward)
     student_mdp.print_results()
